@@ -5,7 +5,7 @@ on:
   workflow_dispatch:  # Deploy manual quando necessário
 
 jobs:
-  pre-deploy-tests:
+  deploy-validation:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -33,7 +33,7 @@ jobs:
           python ci_test.py
   
   deploy:
-    needs: pre-deploy-tests
+    needs: deploy-validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
