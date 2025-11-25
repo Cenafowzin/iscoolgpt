@@ -1,10 +1,55 @@
-name: deploy
+name: Deploy
 on:
   push:
-    branches: [staging, main]
+    branches: [main]
+  workflow_dispatch:  # Deploy manual quando necessário
 
 jobs:
-  deploy:
+  pre-deploy-tests:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "deploying..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Run deployment-safe tests
+        run: |
+          cd backend
+          python tests/test_safe.py
+  
+  deploy:
+    needs: pre-deploy-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy notification
+        run: |
+          echo "🚀 Ready for deployment!"
+          echo "✅ All tests passed without consuming API tokens"
+          echo "📦 Application validated and ready"
+          echo ""
+          echo "Next steps:"
+          echo "1. Configure your deployment platform (Heroku, Railway, etc.)"
+          echo "2. Set GOOGLE_API_KEY environment variable"
+          echo "3. Deploy the backend/ directory"
+      
+      # Adicione aqui seus steps de deploy reais
+      # Exemplo para Heroku:
+      # - name: Deploy to Heroku
+      #   uses: akhileshns/heroku-deploy@v3.12.12
+      #   with:
+      #     heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+      #     heroku_app_name: "your-app-name"
+      #     heroku_email: "your-email@example.com"
+      #     appdir: "backend"

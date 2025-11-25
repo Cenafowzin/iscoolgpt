@@ -1,0 +1,21 @@
+# 🎓 IsCoolGPT - Assistente Virtual de Estudos
+# Dependências para produção (otimizadas)
+
+# Framework Web
+fastapi==0.122.0
+uvicorn[standard]==0.38.0
+
+# Google Gemini AI
+google-generativeai==0.8.5
+
+# Validação e Configuração
+pydantic==2.12.4
+python-dotenv==1.2.1
+
+# Upload de arquivos (se necessário no futuro)
+python-multipart==0.0.6
+
+# ========================================
+# NOTA: Para desenvolvimento e testes, use:
+# pip install -r requirements-dev.txt
+# ========================================

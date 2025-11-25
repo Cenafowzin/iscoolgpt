@@ -1,13 +1,35 @@
-name: test
+name: Comprehensive Tests
 on:
   push:
-    branches: [dev, staging]
+    branches: [dev]
   pull_request:
-    branches: [staging]
+    branches: [dev]
+  workflow_dispatch:  # Permite execução manual
 
 jobs:
-  test:
+  structural-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "running tests..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Run structural tests (safe)
+        run: |
+          cd backend
+          pytest -m 'not api_required' -v --cov=app --cov-report=term-missing
+      
+      - name: Code quality check
+        run: |
+          cd backend
+          python -m py_compile app/*.py
+          echo "✅ Code quality check passed"
