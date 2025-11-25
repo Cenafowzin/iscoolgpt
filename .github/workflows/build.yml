@@ -23,17 +23,18 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
       
+      - name: Setup CI environment
+        run: |
+          cd backend
+          cp .env.ci .env
+      
       - name: Install dependencies
         run: |
           cd backend
           pip install -r requirements.txt
+          pip install -r requirements-dev.txt
       
       - name: Run safe tests (no API tokens consumed)
         run: |
           cd backend
-          python tests/test_safe.py
-      
-      - name: Test application startup
-        run: |
-          cd backend
-          timeout 10 python -c "from app.main import app; print('✅ App imports successfully')" || echo "✅ Startup test completed"
+          python ci_test.py
