@@ -4,6 +4,10 @@ from typing import Optional
 class Settings:
     """Application settings and configuration"""
     
+    # CI/Testing Configuration
+    IS_CI: bool = os.getenv("CI", "false").lower() == "true"
+    SKIP_API_VALIDATION: bool = os.getenv("SKIP_API_VALIDATION", "false").lower() == "true"
+    
     # API Configuration
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
     

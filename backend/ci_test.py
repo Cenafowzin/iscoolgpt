@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script de testes para GitHub Actions
-Executa apenas testes que não consomem tokens da API
+Executa apenas testes que não precisam de API key real
 """
 
 import subprocess
@@ -13,12 +13,16 @@ def run_tests():
     print("🚀 Executando testes seguros no GitHub Actions")
     print("=" * 50)
     
+    # Configurar ambiente para pular validação de API
+    os.environ['CI'] = 'true'
+    os.environ['SKIP_API_VALIDATION'] = 'true'
+    
     # Lista de testes individuais que não consomem API
     test_commands = [
-        "pytest tests/testGenertion.py::test_root -v",
-        "pytest tests/testGenertion.py::test_health_check -v", 
-        "pytest tests/testGenertion.py::test_invalid_endpoints -v",
-        "pytest tests/testGenertion.py::test_malformed_requests -v",
+        "pytest tests/test_genertion.py::test_root -v",
+        "pytest tests/test_genertion.py::test_health_check -v", 
+        "pytest tests/test_genertion.py::test_invalid_endpoints -v",
+        "pytest tests/test_genertion.py::test_malformed_requests -v",
         "pytest tests/test_integration.py::TestPerformance::test_response_time_basic_endpoints -v",
         "pytest tests/test_integration.py::TestPerformance::test_health_check_performance -v"
     ]

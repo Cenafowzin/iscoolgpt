@@ -41,13 +41,18 @@ app.add_middleware(
 
 # Configure Gemini
 api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
+is_ci = os.getenv("CI", "false").lower() == "true"
+skip_api_validation = os.getenv("SKIP_API_VALIDATION", "false").lower() == "true"
+
+if not api_key and not (is_ci or skip_api_validation):
     logger.error("GEMINI_API_KEY not found in environment variables")
     raise ValueError("GEMINI_API_KEY environment variable is required")
 
-print(f"🔑 API Key: OK")
-
-genai.configure(api_key=api_key)
+if is_ci or skip_api_validation:
+    print(f"🧪 Modo CI/Teste - API Key validation pulada")
+else:
+    print(f"🔑 API Key: OK")
+    genai.configure(api_key=api_key)
 
 # Configure generation settings optimized for Gemini 2.0 Flash-Lite
 generation_config = {
@@ -61,10 +66,28 @@ generation_config = {
 model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
 print(f"🤖 Modelo: {model_name}")
 
-model = genai.GenerativeModel(
-    model_name,
-    generation_config=generation_config
-)
+# Inicializar modelo apenas se não estiver no CI
+if not (is_ci or skip_api_validation):
+    model = genai.GenerativeModel(
+        model_name,
+        generation_config=generation_config
+    )
+else:
+    model = None  # No CI, não precisamos do modelo real
+
+# Helper function
+def check_model_available():
+    """Verifica se o modelo está disponível (não estamos no CI)"""
+    if is_ci or skip_api_validation:
+        raise HTTPException(
+            status_code=503, 
+            detail="API não disponível em modo CI/Teste. Use apenas endpoints básicos."
+        )
+    if model is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Modelo Gemini não inicializado"
+        )
 
 # Pydantic models
 class Prompt(BaseModel):
@@ -104,6 +127,9 @@ async def health_check():
 @app.get("/health/full")
 async def full_health_check():
     """Complete health check including Gemini API test"""
+    if is_ci or skip_api_validation:
+        return {"status": "healthy", "mode": "CI/Test", "gemini_connection": "skipped"}
+    
     try:
         # Test Gemini connection with timeout
         test_response = model.generate_content("Test", request_options={"timeout": 10})
@@ -162,6 +188,8 @@ async def list_available_models():
 @app.post("/generate")
 async def generate(data: Prompt):
     """Generate a response using Gemini AI"""
+    check_model_available()  # Verifica se não estamos no CI
+    
     try:
         prompt_text = data.content
         if data.context:
@@ -184,6 +212,8 @@ async def generate(data: Prompt):
 @app.post("/explain")
 async def explain_concept(request: ExplanationRequest):
     """Explain a concept in detail for studying"""
+    check_model_available()  # Verifica se não estamos no CI
+    
     try:
         prompt = f"""
         Explique o conceito "{request.concept}" de forma didática e clara.
@@ -210,6 +240,8 @@ async def explain_concept(request: ExplanationRequest):
 @app.post("/generate-question")
 async def generate_study_question(request: StudyQuestion):
     """Generate study questions for practice"""
+    check_model_available()  # Verifica se não estamos no CI
+    
     try:
         prompt = f"""
         Gere uma questão de estudo sobre {request.subject}, especificamente sobre {request.topic}.
@@ -240,6 +272,8 @@ async def generate_study_question(request: StudyQuestion):
 @app.post("/study-plan")
 async def create_study_plan(request: StudyPlanRequest):
     """Create a personalized study plan"""
+    check_model_available()  # Verifica se não estamos no CI
+    
     try:
         prompt = f"""
         Crie um plano de estudos personalizado com as seguintes especificações:
@@ -276,6 +310,8 @@ async def create_study_plan(request: StudyPlanRequest):
 @app.post("/summarize")
 async def summarize_content(content: Prompt):
     """Summarize study content for review"""
+    check_model_available()  # Verifica se não estamos no CI
+    
     try:
         prompt = f"""
         Faça um resumo didático e estruturado do seguinte conteúdo de estudo:

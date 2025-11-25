@@ -42,7 +42,7 @@ jobs:
       - name: Run coverage tests
         run: |
           cd backend
-          pytest tests/testGenertion.py::test_root tests/testGenertion.py::test_health_check tests/testGenertion.py::test_invalid_endpoints tests/testGenertion.py::test_malformed_requests tests/test_integration.py::TestPerformance --cov=app --cov-report=term-missing
+          pytest tests/test_genertion.py::test_root tests/test_genertion.py::test_health_check tests/test_genertion.py::test_invalid_endpoints tests/test_genertion.py::test_malformed_requests tests/test_integration.py::TestPerformance --cov=app --cov-report=term-missing
       
       - name: Code quality check
         run: |
