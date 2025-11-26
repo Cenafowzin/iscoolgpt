@@ -15,8 +15,6 @@ env:
 jobs:
   deploy:
     name: Build and Deploy
-  deploy:
-    name: Build and Deploy
     runs-on: ubuntu-latest
 
 
