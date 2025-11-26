@@ -17,9 +17,11 @@ jobs:
     name: Build and Deploy
     runs-on: ubuntu-latest
 
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -28,9 +30,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+
 
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
@@ -44,6 +48,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
+
       - name: Download task definition
         run: |
           aws ecs describe-task-definition \
@@ -56,6 +61,14 @@ jobs:
           
           mv task-definition-clean.json task-definition.json
 
+      - name: Add GEMINI_API_KEY environment variable
+        run: |
+          jq --arg key "GEMINI_API_KEY" --arg value "${{ secrets.GEMINI_API_KEY }}" \
+            '.containerDefinitions[0].environment += [{"name": $key, "value": $value}]' \
+            task-definition.json > task-definition-with-env.json
+          
+          mv task-definition-with-env.json task-definition.json
+
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -63,6 +76,7 @@ jobs:
           task-definition: task-definition.json
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
+
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
