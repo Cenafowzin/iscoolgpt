@@ -1,0 +1,17 @@
+# 🧪 IsCoolGPT - Dependências de Desenvolvimento
+# Instalar com: pip install -r requirements-dev.txt
+
+# Primeiro instale as dependências de produção
+-r requirements.txt
+
+# Ferramentas de Teste
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+
+# Cliente HTTP para testes
+httpx==0.28.1
+
+# Formatação e Linting (opcional)
+black==24.10.0
+ruff==0.8.1  # Substituto moderno para flake8
