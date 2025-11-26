@@ -56,6 +56,14 @@ jobs:
           
           mv task-definition-clean.json task-definition.json
 
+      - name: Add GEMINI_API_KEY environment variable
+        run: |
+          jq --arg key "GEMINI_API_KEY" --arg value "${{ secrets.GEMINI_API_KEY }}" \
+            '.containerDefinitions[0].environment += [{"name": $key, "value": $value}]' \
+            task-definition.json > task-definition-with-env.json
+          
+          mv task-definition-with-env.json task-definition.json
+
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
