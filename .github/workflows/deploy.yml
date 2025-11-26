@@ -1,8 +1,16 @@
-name: Deploy
+name: deploy
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Deploy manual quando necessário
+  workflow_dispatch:
+
+env:
+  AWS_REGION: sa-east-1
+  ECR_REPOSITORY: iscoolgpt
+  ECS_CLUSTER: iscoolgpt-cluster
+  ECS_SERVICE: iscoolgpt-service
+  ECS_TASK_DEFINITION: iscoolgpt-task
+  CONTAINER_NAME: iscoolgpt-container
 
 jobs:
   deploy-validation:
@@ -10,52 +18,83 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Setup CI environment
         run: |
           cd backend
           cp .env.ci .env
-      
+
       - name: Install dependencies
         run: |
           cd backend
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      
+
       - name: Run deployment-safe tests
         run: |
           cd backend
           python ci_test.py
-  
-  deploy:
+
+  build-and-deploy:
     needs: deploy-validation
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Deploy notification
-        run: |
-          echo "🚀 Ready for deployment!"
-          echo "✅ All tests passed without consuming API tokens"
-          echo "📦 Application validated and ready"
-          echo ""
-          echo "Next steps:"
-          echo "1. Configure your deployment platform (Heroku, Railway, etc.)"
-          echo "2. Set GOOGLE_API_KEY environment variable"
-          echo "3. Deploy the backend/ directory"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
       
-      # Adicione aqui seus steps de deploy reais
-      # Exemplo para Heroku:
-      # - name: Deploy to Heroku
-      #   uses: akhileshns/heroku-deploy@v3.12.12
-      #   with:
-      #     heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-      #     heroku_app_name: "your-app-name"
-      #     heroku_email: "your-email@example.com"
-      #     appdir: "backend"
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --query taskDefinition > task-definition.json
+      
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+      
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+      
+      - name: Deployment complete
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "🚀 Image: ${{ steps.build-image.outputs.image }}"

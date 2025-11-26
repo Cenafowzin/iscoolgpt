@@ -1,9 +1,13 @@
-name: Comprehensive Tests
+name: test
 on:
-  workflow_dispatch:  # Apenas execução manual
+  push:
+    branches: [dev, staging, main]
+  pull_request:
+    branches: [dev, staging, main]
+  workflow_dispatch:  # Execução manual quando necessário
 
 jobs:
-  comprehensive-tests:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -18,12 +22,6 @@ jobs:
         run: |
           cd backend
           cp .env.ci .env
-      
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
       
       - name: Install dependencies
         run: |
