@@ -1,13 +1,46 @@
 name: test
 on:
   push:
-    branches: [dev, staging]
+    branches: [dev, staging, main]
   pull_request:
-    branches: [staging]
+    branches: [dev, staging, main]
+  workflow_dispatch:  # Execução manual quando necessário
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "running tests..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Setup CI environment
+        run: |
+          cd backend
+          cp .env.ci .env
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Run structural tests (safe)
+        run: |
+          cd backend
+          python ci_test.py
+      
+      - name: Run coverage tests
+        run: |
+          cd backend
+          pytest tests/test_genertion.py::test_root tests/test_genertion.py::test_health_check tests/test_genertion.py::test_invalid_endpoints tests/test_genertion.py::test_malformed_requests tests/test_integration.py::TestPerformance --cov=app --cov-report=term-missing
+      
+      - name: Code quality check
+        run: |
+          cd backend
+          python -m py_compile app/*.py
+          echo "✅ Code quality check passed"
